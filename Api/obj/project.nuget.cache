@@ -1,11 +1,13 @@
 {
   "version": 2,
-  "dgSpecHash": "v628aKocJ7Q=",
+  "dgSpecHash": "kwDedUma6/I=",
   "success": true,
   "projectFilePath": "C:\\Users\\israe\\OneDrive\\Documentos\\projetos pessoais\\ApexNewsletter\\Api\\Api.csproj",
   "expectedPackageFiles": [
-    "C:\\Users\\israe\\.nuget\\packages\\microsoft.aspnetcore.openapi\\10.0.5\\microsoft.aspnetcore.openapi.10.0.5.nupkg.sha512",
-    "C:\\Users\\israe\\.nuget\\packages\\microsoft.openapi\\2.0.0\\microsoft.openapi.2.0.0.nupkg.sha512"
+    "C:\\Users\\israe\\.nuget\\packages\\microsoft.netcore.app.ref\\8.0.25\\microsoft.netcore.app.ref.8.0.25.nupkg.sha512",
+    "C:\\Users\\israe\\.nuget\\packages\\microsoft.windowsdesktop.app.ref\\8.0.25\\microsoft.windowsdesktop.app.ref.8.0.25.nupkg.sha512",
+    "C:\\Users\\israe\\.nuget\\packages\\microsoft.aspnetcore.app.ref\\8.0.25\\microsoft.aspnetcore.app.ref.8.0.25.nupkg.sha512",
+    "C:\\Users\\israe\\.nuget\\packages\\microsoft.netcore.app.host.win-x64\\8.0.25\\microsoft.netcore.app.host.win-x64.8.0.25.nupkg.sha512"
   ],
   "logs": []
 }
