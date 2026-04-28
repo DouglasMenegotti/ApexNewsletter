@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-public class Newletter
+public class Newsletter
 {
     public Guid Id { get; set; } = Guid.NewGuid();
 
