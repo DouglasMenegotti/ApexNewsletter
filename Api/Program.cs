@@ -1,15 +1,63 @@
+using Api.Services;
 using Microsoft.AspNetCore.Mvc;
 
 var builder = WebApplication.CreateBuilder(args);
 
-List<Newsletter> newsletters = new List<Newsletter>();
-List<User> users = new List<User>();
+builder.Services.AddScoped<MotorsportScraperService>();
+builder.Services.AddScoped<AiSummarizerService>();
 
 var app = builder.Build();
 
+List<Newsletter> newsletters = new List<Newsletter>();
+List<User> users = new List<User>();
 
+app.MapGet("/raspar-noticias", async (IConfiguration config, MotorsportScraperService scraper, AiSummarizerService aiService) =>
+{
+    var racingSites = config.GetSection("RacingSites").Get<Dictionary<string, string>>();
 
-// GET - listar todas
+    if (racingSites == null || racingSites.Count == 0)
+        return Results.BadRequest("Nenhum site configurado no appsettings.json");
+
+    var relatorioGeral = new Dictionary<string, object>();
+
+    foreach (var site in racingSites)
+    {
+        string categoria = site.Key;
+        string urlBase = site.Value;
+        var todosOsLinks = await scraper.ObterLinksAsync(urlBase);
+        string termoBusca = categoria.ToLower() == "brasil" ? "stockcar-br" : categoria.ToLower();
+        var linksEncontrados = todosOsLinks
+            .Where(link => link.ToLower().Contains($"/{termoBusca}/"))
+            .ToList();
+
+        string noticiaFinal = "Nenhuma notícia encontrada.";
+
+        if (linksEncontrados.Count > 0)
+        {
+            string urlNoticia = linksEncontrados[0];
+            string textoBruto = await scraper.ObterTextoDaNoticiaAsync(urlNoticia);
+            noticiaFinal = await aiService.ResumirNoticiaAsync(textoBruto, categoria, urlNoticia);
+
+            var novaNoticiaParaOBanco = new Newsletter
+            {
+                Id = Guid.NewGuid(),
+                Title = $"Resumo IA - {categoria} ({DateTime.Now:dd/MM/yyyy})",
+                Content = noticiaFinal,
+            };
+
+            newsletters.Add(novaNoticiaParaOBanco);
+        }
+
+        relatorioGeral.Add(categoria, new
+        {
+            QuantidadeDeLinksEncontrados = linksEncontrados.Count,
+            NoticiaGeradaPelaIA = noticiaFinal
+        });
+    }
+
+    return Results.Ok(relatorioGeral);
+});
+
 app.MapGet("/api/newsletters", () =>
 {
     if (newsletters.Any())
@@ -31,7 +79,6 @@ app.MapGet("/api/newsletters/{id}", ([FromRoute] Guid id) =>
     return Results.NotFound("Notícia não encontrada!");
 });
 
-// POST - criar
 app.MapPost("/api/newsletters", ([FromBody] Newsletter newsletter) =>
 {
     foreach (Newsletter news in newsletters)
@@ -46,34 +93,29 @@ app.MapPost("/api/newsletters", ([FromBody] Newsletter newsletter) =>
     return Results.Created("", "Notícia adicionada com sucesso");
 });
 
-app.MapDelete("/api/newsletters/{id}", ([FromRoute] Guid id) =>
-{
-    foreach (Newsletter news in newsletters)
-    {
-        if (news.Id == id)
-        {
-            return Results.Ok("Removido com sucesso!");
-        }
-    }
-
-    return Results.NotFound("Newsletter não encontrada!");
-});
-
 app.MapPut("/api/newsletters", ([FromBody] Newsletter newsletter) =>
 {
-    foreach (Newsletter news in newsletters)
+    var news = newsletters.FirstOrDefault(n => n.Id == newsletter.Id);
+    if (news != null)
     {
-        if (news.Id == newsletter.Id)
-        {
-            newsletters.Add(newsletter);
-            return Results.Ok("Notícia atualizada");
-        }
+        news.Title = newsletter.Title;
+        return Results.Ok("Notícia atualizada");
     }
 
     return Results.NotFound("Notícia não encontrada");
 });
 
+app.MapDelete("/api/newsletters/{id}", ([FromRoute] Guid id) =>
+{
+    var news = newsletters.FirstOrDefault(n => n.Id == id);
+    if (news != null)
+    {
+        newsletters.Remove(news);
+        return Results.Ok("Removido com sucesso!");
+    }
 
+    return Results.NotFound("Newsletter não encontrada!");
+});
 
 app.MapGet("/api/users", () =>
 {
@@ -110,35 +152,30 @@ app.MapPost("/api/users", ([FromBody] User user) =>
     return Results.Created("", "Usuário adicionado com sucesso");
 });
 
-app.MapDelete("/api/users/{id}", ([FromRoute] Guid id) =>
-{
-    foreach (User u in users)
-    {
-        if (u.Id == id)
-        {
-            return Results.Ok("Removido com sucesso!");
-        }
-    }
-
-    return Results.NotFound("Usuário não encontrado!");
-});
-
 app.MapPut("/api/users", ([FromBody] User user) =>
 {
-    foreach (User u in users)
+    var u = users.FirstOrDefault(u => u.Id == user.Id);
+    if (u != null)
     {
-        if (u.Id == user.Id)
-        {
-            users.Add(u);
-            return Results.Ok("Usuário atualizado");
-        }
+        u.Name = user.Name;
+        return Results.Ok("Usuário atualizado");
     }
 
     return Results.NotFound("Usuário não encontrado");
 });
 
+app.MapDelete("/api/users/{id}", ([FromRoute] Guid id) =>
+{
+    var u = users.FirstOrDefault(user => user.Id == id);
+    if (u != null)
+    {
+        users.Remove(u);
+        return Results.Ok("Removido com sucesso!");
+    }
 
+    return Results.NotFound("Usuário não encontrado!");
+});
 
-app.MapGet("/", () => "API está rodando");
+app.MapGet("/", () => "API está rodando perfeitamente!");
 
 app.Run();
