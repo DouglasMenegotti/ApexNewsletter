@@ -1,3 +1,4 @@
+namespace Api.Models;
 using System.ComponentModel.DataAnnotations;
 
 public class Newsletter

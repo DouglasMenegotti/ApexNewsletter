@@ -1,17 +1,26 @@
+using Api.Data;
+using Api.Models;
 using Api.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseSqlite("Data Source=apexnewsletter.db"));
 
 builder.Services.AddScoped<MotorsportScraperService>();
 builder.Services.AddScoped<AiSummarizerService>();
 
 var app = builder.Build();
 
-List<Newsletter> newsletters = new List<Newsletter>();
-List<User> users = new List<User>();
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    db.Database.EnsureCreated();
+}
 
-app.MapGet("/raspar-noticias", async (IConfiguration config, MotorsportScraperService scraper, AiSummarizerService aiService) =>
+app.MapGet("/raspar-noticias", async (IConfiguration config, MotorsportScraperService scraper, AiSummarizerService aiService, AppDbContext db) =>
 {
     var racingSites = config.GetSection("RacingSites").Get<Dictionary<string, string>>();
 
@@ -45,7 +54,7 @@ app.MapGet("/raspar-noticias", async (IConfiguration config, MotorsportScraperSe
                 Content = noticiaFinal,
             };
 
-            newsletters.Add(novaNoticiaParaOBanco);
+            db.Newsletters.Add(novaNoticiaParaOBanco);
         }
 
         relatorioGeral.Add(categoria, new
@@ -55,124 +64,109 @@ app.MapGet("/raspar-noticias", async (IConfiguration config, MotorsportScraperSe
         });
     }
 
+    await db.SaveChangesAsync();
     return Results.Ok(relatorioGeral);
 });
 
-app.MapGet("/api/newsletters", () =>
+app.MapGet("/api/newsletters", async (AppDbContext db) =>
 {
+    var newsletters = await db.Newsletters.ToListAsync();
     if (newsletters.Any())
-    {
-        return Results.Ok(newsletters.ToList());
-    }
+        return Results.Ok(newsletters);
     return Results.NoContent();
 });
 
-app.MapGet("/api/newsletters/{id}", ([FromRoute] Guid id) =>
+app.MapGet("/api/newsletters/{id}", async ([FromRoute] Guid id, AppDbContext db) =>
 {
-    foreach (Newsletter news in newsletters)
-    {
-        if (news.Id == id)
-        {
-            return Results.Ok(news);
-        }
-    }
+    var news = await db.Newsletters.FindAsync(id);
+    if (news != null)
+        return Results.Ok(news);
     return Results.NotFound("Notícia não encontrada!");
 });
 
-app.MapPost("/api/newsletters", ([FromBody] Newsletter newsletter) =>
+app.MapPost("/api/newsletters", async ([FromBody] Newsletter newsletter, AppDbContext db) =>
 {
-    foreach (Newsletter news in newsletters)
-    {
-        if (news.Title == newsletter.Title)
-        {
-            return Results.Conflict("Essa notícia já existe!");
-        }
-    }
+    var existe = await db.Newsletters.AnyAsync(n => n.Title == newsletter.Title);
+    if (existe)
+        return Results.Conflict("Essa notícia já existe!");
 
-    newsletters.Add(newsletter);
+    db.Newsletters.Add(newsletter);
+    await db.SaveChangesAsync();
     return Results.Created("", "Notícia adicionada com sucesso");
 });
 
-app.MapPut("/api/newsletters", ([FromBody] Newsletter newsletter) =>
+app.MapPut("/api/newsletters", async ([FromBody] Newsletter newsletter, AppDbContext db) =>
 {
-    var news = newsletters.FirstOrDefault(n => n.Id == newsletter.Id);
+    var news = await db.Newsletters.FindAsync(newsletter.Id);
     if (news != null)
     {
         news.Title = newsletter.Title;
+        await db.SaveChangesAsync();
         return Results.Ok("Notícia atualizada");
     }
-
     return Results.NotFound("Notícia não encontrada");
 });
 
-app.MapDelete("/api/newsletters/{id}", ([FromRoute] Guid id) =>
+app.MapDelete("/api/newsletters/{id}", async ([FromRoute] Guid id, AppDbContext db) =>
 {
-    var news = newsletters.FirstOrDefault(n => n.Id == id);
+    var news = await db.Newsletters.FindAsync(id);
     if (news != null)
     {
-        newsletters.Remove(news);
+        db.Newsletters.Remove(news);
+        await db.SaveChangesAsync();
         return Results.Ok("Removido com sucesso!");
     }
-
     return Results.NotFound("Newsletter não encontrada!");
 });
 
-app.MapGet("/api/users", () =>
+app.MapGet("/api/users", async (AppDbContext db) =>
 {
+    var users = await db.Users.ToListAsync();
     if (users.Any())
-    {
-        return Results.Ok(users.ToList());
-    }
+        return Results.Ok(users);
     return Results.NoContent();
 });
 
-app.MapGet("/api/users/{id}", ([FromRoute] Guid id) =>
+app.MapGet("/api/users/{id}", async ([FromRoute] Guid id, AppDbContext db) =>
 {
-    foreach (User user in users)
-    {
-        if (user.Id == id)
-        {
-            return Results.Ok(user);
-        }
-    }
+    var user = await db.Users.FindAsync(id);
+    if (user != null)
+        return Results.Ok(user);
     return Results.NotFound("Usuário não encontrado!");
 });
 
-app.MapPost("/api/users", ([FromBody] User user) =>
+app.MapPost("/api/users", async ([FromBody] User user, AppDbContext db) =>
 {
-    foreach (User u in users)
-    {
-        if (user.Name == u.Name)
-        {
-            return Results.Conflict("Já existe esse usuário!");
-        }
-    }
+    var existe = await db.Users.AnyAsync(u => u.Name == user.Name);
+    if (existe)
+        return Results.Conflict("Já existe esse usuário!");
 
-    users.Add(user);
+    db.Users.Add(user);
+    await db.SaveChangesAsync();
     return Results.Created("", "Usuário adicionado com sucesso");
 });
 
-app.MapPut("/api/users", ([FromBody] User user) =>
+app.MapPut("/api/users", async ([FromBody] User user, AppDbContext db) =>
 {
-    var u = users.FirstOrDefault(u => u.Id == user.Id);
+    var u = await db.Users.FindAsync(user.Id);
     if (u != null)
     {
         u.Name = user.Name;
+        await db.SaveChangesAsync();
         return Results.Ok("Usuário atualizado");
     }
-
     return Results.NotFound("Usuário não encontrado");
 });
 
-app.MapDelete("/api/users/{id}", ([FromRoute] Guid id) =>
+app.MapDelete("/api/users/{id}", async ([FromRoute] Guid id, AppDbContext db) =>
 {
-    var u = users.FirstOrDefault(user => user.Id == id);
+    var u = await db.Users.FindAsync(id);
     if (u != null)
     {
-        users.Remove(u);
+        db.Users.Remove(u);
+        await db.SaveChangesAsync();
         return Results.Ok("Removido com sucesso!");
     }
-
     return Results.NotFound("Usuário não encontrado!");
 });
 
