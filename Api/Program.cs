@@ -12,6 +12,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddScoped<MotorsportScraperService>();
 builder.Services.AddScoped<AiSummarizerService>();
 
+
 var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())
@@ -71,16 +72,16 @@ app.MapGet("/raspar-noticias", async (IConfiguration config, MotorsportScraperSe
 app.MapGet("/api/newsletters", async (AppDbContext db) =>
 {
     var newsletters = await db.Newsletters.ToListAsync();
-    if (newsletters.Any())
-        return Results.Ok(newsletters);
+    if (newsletters.Any()) return Results.Ok(newsletters);
     return Results.NoContent();
-});
+}
+
+);
 
 app.MapGet("/api/newsletters/{id}", async ([FromRoute] Guid id, AppDbContext db) =>
 {
     var news = await db.Newsletters.FindAsync(id);
-    if (news != null)
-        return Results.Ok(news);
+    if (news != null) return Results.Ok(news);
     return Results.NotFound("Notícia não encontrada!");
 });
 

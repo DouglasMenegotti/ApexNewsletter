@@ -1,0 +1,46 @@
+@baseUrl = http://localhost:5216
+
+
+###  GET - Buscar todos os usuários
+GET {{baseUrl}}/api/users
+Accept: application/json
+
+###
+
+###  GET - Buscar usuário por ID
+GET {{baseUrl}}/api/users/{{id}}
+Accept: application/json
+
+@id = 769b331d-3528-4638-bd83-2d9e375a8cfb
+
+###
+
+###  POST - Criar usuário
+POST {{baseUrl}}/api/users
+Content-Type: application/json
+
+{
+  "id": "{{$guid}}",
+  "name": "Joao neves"
+  "email": "",
+  "passwordHash": "",
+}
+
+###
+
+###  PUT - Atualizar usuário
+PUT {{baseUrl}}/api/users
+Content-Type: application/json
+
+{
+  "id": "769b331d-3528-4638-bd83-2d9e375a8cfb",
+  "name": "João Atualizado"
+}
+
+###
+
+###  DELETE - Remover usuário
+DELETE {{baseUrl}}/api/users/{{id}}
+Accept: application/json
+
+@id = 769b331d-3528-4638-bd83-2d9e375a8cfb

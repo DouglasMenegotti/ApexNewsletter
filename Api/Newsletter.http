@@ -1,0 +1,52 @@
+@baseUrl =  http://localhost:5216
+
+###  GET - Buscar todas as newsletters
+GET {{baseUrl}}/api/newsletters
+Accept: application/json
+
+###
+
+###  GET - Buscar newsletter por ID
+GET {{baseUrl}}/api/newsletters/{{id}}
+Accept: application/json
+
+#  Cole um GUID válido abaixo antes de rodar
+@id = 60f218b2-cd00-4637-9858-37de7937360d
+
+###
+
+###  POST - Criar nova newsletter
+POST {{baseUrl}}/api/newsletters
+Content-Type: application/json
+
+{
+  "id": "{{$guid}}",
+  "title": "Nova notícia de teste",
+  "content": "Conteúdo da notícia gerado manualmente"
+}
+
+###
+
+###  PUT - Atualizar newsletter
+PUT {{baseUrl}}/api/newsletters
+Content-Type: application/json
+
+{
+  "id": "60f218b2-cd00-4637-9858-37de7937360d",
+  "title": "Título atualizado",
+  "subTitle": "",
+  "content": "",
+}
+
+###
+
+### DELETE - Remover newsletter
+DELETE {{baseUrl}}/api/newsletters/{{id}}
+Accept: application/json
+
+@id = e8c79eff-cfae-4db2-9232-6356d12bbf05
+
+###
+
+###  GET - Rodar scraping (gera e salva notícias)
+GET {{baseUrl}}/raspar-noticias
