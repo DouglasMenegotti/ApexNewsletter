@@ -1,4 +1,15 @@
+# .NET
 .vs/
 bin/
 obj/
 appsettings.json
+*.user
+
+# Node / Vite
+web/node_modules/
+web/dist/
+web/.vite/
+
+# Sistema
+.DS_Store
+Thumbs.db

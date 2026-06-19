@@ -12,8 +12,12 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddScoped<MotorsportScraperService>();
 builder.Services.AddScoped<AiSummarizerService>();
 
+builder.Services.AddCors(o => o.AddDefaultPolicy(p =>
+    p.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader()));
 
 var app = builder.Build();
+
+app.UseCors();
 
 using (var scope = app.Services.CreateScope())
 {
