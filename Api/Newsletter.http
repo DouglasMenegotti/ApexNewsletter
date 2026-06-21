@@ -1,21 +1,16 @@
-@baseUrl =  http://localhost:5216
+@baseUrl = http://localhost:5216
+@idGet = eb59f207-10f2-405d-8e7d-e8ea651c653e
+@idDelete = eb59f207-10f2-405d-8e7d-e8ea651c653e
 
-###  GET - Buscar todas as newsletters
+###
 GET {{baseUrl}}/api/newsletters
 Accept: application/json
 
 ###
-
-###  GET - Buscar newsletter por ID
-GET {{baseUrl}}/api/newsletters/{{id}}
+GET {{baseUrl}}/api/newsletters/{{idGet}}
 Accept: application/json
 
-#  Cole um GUID válido abaixo antes de rodar
-@id = 60f218b2-cd00-4637-9858-37de7937360d
-
 ###
-
-###  POST - Criar nova newsletter
 POST {{baseUrl}}/api/newsletters
 Content-Type: application/json
 
@@ -26,27 +21,19 @@ Content-Type: application/json
 }
 
 ###
-
-###  PUT - Atualizar newsletter
 PUT {{baseUrl}}/api/newsletters
 Content-Type: application/json
 
 {
-  "id": "60f218b2-cd00-4637-9858-37de7937360d",
+  "id": "cc90e334-0321-40a0-878c-6b40fc72ab67",
   "title": "Título atualizado",
   "subTitle": "",
-  "content": "",
+  "content": ""
 }
 
 ###
-
-### DELETE - Remover newsletter
-DELETE {{baseUrl}}/api/newsletters/{{id}}
+DELETE {{baseUrl}}/api/newsletters/{{idDelete}}
 Accept: application/json
 
-@id = e8c79eff-cfae-4db2-9232-6356d12bbf05
-
 ###
-
-###  GET - Rodar scraping (gera e salva notícias)
 GET {{baseUrl}}/raspar-noticias
