@@ -32,6 +32,22 @@ app.MapGet("/raspar-noticias", async (IConfiguration config, MotorsportScraperSe
     if (racingSites == null || racingSites.Count == 0)
         return Results.BadRequest("Nenhum site configurado no appsettings.json");
 
+    var ultimaRaspagem = await db.Newsletters
+        .Where(n => n.Title.StartsWith("Resumo IA"))
+        .OrderByDescending(n => n.CreatedAt)
+        .Select(n => (DateTime?)n.CreatedAt)
+        .FirstOrDefaultAsync();
+
+    if (ultimaRaspagem.HasValue && DateTime.Now - ultimaRaspagem.Value < TimeSpan.FromHours(4))
+    {
+        var proxima = ultimaRaspagem.Value.AddHours(4);
+        return Results.BadRequest(new
+        {
+            mensagem = "Aguarde antes de raspar novamente.",
+            proximaRaspagem = proxima.ToString("HH:mm 'de' dd/MM/yyyy")
+        });
+    }
+
     var relatorioGeral = new Dictionary<string, object>();
 
     foreach (var site in racingSites)
@@ -52,14 +68,18 @@ app.MapGet("/raspar-noticias", async (IConfiguration config, MotorsportScraperSe
             string textoBruto = await scraper.ObterTextoDaNoticiaAsync(urlNoticia);
             noticiaFinal = await aiService.ResumirNoticiaAsync(textoBruto, categoria, urlNoticia);
 
-            var novaNoticiaParaOBanco = new Newsletter
-            {
-                Id = Guid.NewGuid(),
-                Title = $"Resumo IA - {categoria} ({DateTime.Now:dd/MM/yyyy})",
-                Content = noticiaFinal,
-            };
+            string titulo = $"Resumo IA - {categoria} ({DateTime.Now:dd/MM/yyyy})";
+            var jaExiste = await db.Newsletters.AnyAsync(n => n.Title == titulo);
 
-            db.Newsletters.Add(novaNoticiaParaOBanco);
+            if (!jaExiste)
+            {
+                db.Newsletters.Add(new Newsletter
+                {
+                    Id = Guid.NewGuid(),
+                    Title = titulo,
+                    Content = noticiaFinal,
+                });
+            }
         }
 
         relatorioGeral.Add(categoria, new
@@ -106,6 +126,8 @@ app.MapPut("/api/newsletters", async ([FromBody] Newsletter newsletter, AppDbCon
     if (news != null)
     {
         news.Title = newsletter.Title;
+        news.SubTitle = newsletter.SubTitle;
+        news.Content = newsletter.Content;
         await db.SaveChangesAsync();
         return Results.Ok("Notícia atualizada");
     }
@@ -157,6 +179,8 @@ app.MapPut("/api/users", async ([FromBody] User user, AppDbContext db) =>
     if (u != null)
     {
         u.Name = user.Name;
+        u.Email = user.Email;
+        u.PasswordHash = user.PasswordHash;
         await db.SaveChangesAsync();
         return Results.Ok("Usuário atualizado");
     }
@@ -175,6 +199,19 @@ app.MapDelete("/api/users/{id}", async ([FromRoute] Guid id, AppDbContext db) =>
     return Results.NotFound("Usuário não encontrado!");
 });
 
+app.MapPost("/api/login", async ([FromBody] LoginRequest request, AppDbContext db) =>
+{
+    var user = await db.Users.FirstOrDefaultAsync(u =>
+        u.Email == request.Email && u.PasswordHash == request.Password);
+
+    if (user == null)
+        return Results.Unauthorized();
+
+    return Results.Ok(user);
+});
+
 app.MapGet("/", () => "API está rodando perfeitamente!");
 
 app.Run();
+
+record LoginRequest(string Email, string Password);
